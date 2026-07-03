@@ -5,8 +5,8 @@
    real do projeto do Moreira's.
    ========================================================= */
 
-const SUPA_URL  = 'COLOQUE_AQUI_A_URL_DO_SEU_PROJETO_SUPABASE';
-const SUPA_ANON = 'COLOQUE_AQUI_A_CHAVE_PUBLICAVEL_DO_SUPABASE';
+const SUPA_URL  = 'https://pgeqwitgpakgnkyqarts.supabase.co';
+const SUPA_ANON = 'sb_publishable_VL8sKeovsq4zX59bx_wJIw_ZMX5htNk';
 
 /* ---------------------------------------------------------
    Cardapio -- espelha os itens que ja estao no index (nome,

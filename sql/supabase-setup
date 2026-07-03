@@ -1,0 +1,115 @@
+-- ============================================================
+--  MOREIRA'S BURGUER -- Supabase Setup
+--  Baseado na estrutura usada no site da Bylax, adaptado para
+--  uma hamburgueria com entrega local por bairro.
+-- ============================================================
+
+-- ---- 1. CLIENTES ----------------------------------------------
+create table if not exists clientes (
+  id          uuid primary key default gen_random_uuid(),
+  nome        text not null,
+  telefone    text not null,
+  email       text,
+  bairro      text,
+  rua         text,
+  numero      text,
+  complemento text,
+  referencia  text,
+  criado_em   timestamptz default now()
+);
+
+-- ---- 2. BAIRROS DE ENTREGA -------------------------------------
+-- Cada bairro atendido tem uma taxa de entrega e um tempo estimado.
+-- O painel admin le e escreve nesta tabela, entao os valores podem
+-- ser ajustados sem tocar em codigo.
+create table if not exists bairros_entrega (
+  id          uuid primary key default gen_random_uuid(),
+  bairro      text not null unique,
+  zona        text,
+  taxa        numeric(10,2) not null default 0,
+  tempo_min   int not null default 35,
+  ativo       boolean not null default true,
+  criado_em   timestamptz default now()
+);
+
+-- ---- 3. CARDAPIO (disponibilidade) ------------------------------
+-- O cardapio em si (nome, preco, descricao) fica no index e no
+-- js/data.js. Esta tabela controla apenas se um item esta
+-- disponivel ou esgotado no momento, para o admin poder pausar
+-- a venda de um item sem editar o site.
+create table if not exists cardapio_disponibilidade (
+  id          uuid primary key default gen_random_uuid(),
+  item        text not null unique,
+  disponivel  boolean not null default true,
+  atualizado_em timestamptz default now()
+);
+
+-- ---- 4. CUPONS ---------------------------------------------------
+create table if not exists cupons (
+  id          uuid primary key default gen_random_uuid(),
+  codigo      text not null unique,
+  tipo        text not null default 'percentual', -- percentual | valor
+  valor       numeric(10,2) not null default 0,
+  ativo       boolean not null default true,
+  criado_em   timestamptz default now()
+);
+
+-- ---- 5. PEDIDOS ----------------------------------------------------
+create table if not exists pedidos (
+  id              uuid primary key default gen_random_uuid(),
+  cliente_nome    text not null,
+  cliente_tel     text not null,
+  cliente_email   text,
+  bairro          text,
+  endereco        text,
+  referencia      text,
+  subtotal        numeric(10,2) not null default 0,
+  desconto        numeric(10,2) not null default 0,
+  cupom           text,
+  taxa_entrega    numeric(10,2) not null default 0,
+  total           numeric(10,2) not null default 0,
+  forma_pagamento text,                 -- mercado_pago | pix
+  status          text not null default 'novo',
+  -- novo -> preparando -> saiu_para_entrega -> entregue -> cancelado
+  link_pagamento  text,
+  observacoes     text,
+  itens_resumo    text,
+  criado_em       timestamptz default now(),
+  atualizado_em   timestamptz default now()
+);
+
+-- ---- 6. ITENS DO PEDIDO --------------------------------------------
+create table if not exists itens_pedido (
+  id          uuid primary key default gen_random_uuid(),
+  pedido_id   uuid not null references pedidos(id) on delete cascade,
+  item        text not null,
+  observacao  text,          -- ex.: "sem cebola", "ponto da carne: bem passado"
+  adicionais  text,          -- ex.: "bacon, ovo"
+  quantidade  int not null default 1,
+  preco_unit  numeric(10,2) not null default 0,
+  subtotal    numeric(10,2) generated always as (quantidade * preco_unit) stored
+);
+
+-- ---- INDICES ----------------------------------------------------
+create index if not exists idx_pedidos_status on pedidos(status);
+create index if not exists idx_pedidos_criado_em on pedidos(criado_em desc);
+create index if not exists idx_itens_pedido_id on itens_pedido(pedido_id);
+
+-- ---- SEED: bairros iniciais (ajuste valores e complete a lista) ----
+insert into bairros_entrega (bairro, zona, taxa, tempo_min) values
+  ('Centro', 'centro', 5.00, 25),
+  ('Jardim dos Estados', 'centro', 6.00, 30),
+  ('Jardim Country Club', 'zona_norte', 8.00, 35),
+  ('Vila Rosa', 'zona_norte', 8.00, 35),
+  ('Jardim Bandeirantes', 'zona_leste', 7.00, 30),
+  ('Jardim Cascatinha', 'zona_leste', 8.00, 35),
+  ('Jardim Amaryllis', 'zona_sul', 8.00, 35),
+  ('Estancia Sao Jose', 'zona_sul', 9.00, 40),
+  ('Elvira Dias', 'zona_oeste', 9.00, 40),
+  ('Jardim Bela Vista', 'zona_oeste', 9.00, 40)
+on conflict (bairro) do nothing;
+
+-- ---- SEED: cupom padrao ------------------------------------------
+insert into cupons (codigo, tipo, valor, ativo) values
+  ('MOREIRA01', 'percentual', 20, true)
+on conflict (codigo) do nothing;

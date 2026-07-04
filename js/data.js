@@ -121,13 +121,19 @@ async function carregarCuponsDoSupabase() {
 async function carregarDisponibilidadeDoSupabase() {
   if (!SUPA_URL.startsWith('http')) return;
   try {
-    const resp = await fetch(`${SUPA_URL}/rest/v1/cardapio_disponibilidade?select=item,disponivel`, {
+    const resp = await fetch(`${SUPA_URL}/rest/v1/cardapio_disponibilidade?select=item,disponivel,preco`, {
       headers: { apikey: SUPA_ANON, Authorization: `Bearer ${SUPA_ANON}` }
     });
     if (!resp.ok) return;
     const rows = await resp.json();
     const novo = {};
-    rows.forEach(r => { novo[r.item] = r.disponivel; });
+    rows.forEach(r => {
+      novo[r.item] = r.disponivel;
+      // se o admin definiu um preco pra esse item, ele sobrescreve o preco fixo do menu abaixo
+      if (r.preco !== null && r.preco !== undefined && window.MENU_MOREIRAS[r.item]) {
+        window.MENU_MOREIRAS[r.item].price = Number(r.preco);
+      }
+    });
     window.DISPONIBILIDADE_CACHE = novo;
     window.dispatchEvent(new Event('disponibilidade:carregada'));
   } catch (e) {

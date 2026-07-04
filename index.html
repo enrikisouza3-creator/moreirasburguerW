@@ -88,6 +88,31 @@
     cursor:pointer;
   }
 
+  /* ---------- SEARCH BAR ---------- */
+  .search-overlay{
+    max-height:0; overflow:hidden;
+    transition:max-height .25s ease;
+    border-top:1px solid transparent;
+  }
+  .search-overlay.on{
+    max-height:80px;
+    border-top-color:rgba(242,168,29,.18);
+  }
+  .search-box{
+    max-width:1180px; margin:0 auto;
+    display:flex; align-items:center; gap:10px;
+    padding:14px 24px; color:var(--gold-soft);
+  }
+  .search-box input{
+    flex:1; background:none; border:none; outline:none;
+    color:var(--cream); font-family:'Inter'; font-size:15px;
+  }
+  .search-box input::placeholder{color:var(--cream-dim);}
+  .search-close{
+    background:none; border:none; color:var(--cream-dim);
+    font-size:22px; line-height:1; cursor:pointer; padding:0 4px;
+  }
+
   /* ---------- HERO ---------- */
   .hero{position:relative; padding-top:8px; overflow:hidden;}
   .hero-media{
@@ -701,12 +726,19 @@
       </div>
     </div>
     <div class="header-actions">
-      <div class="icon-btn" title="Buscar">
+      <div class="icon-btn" title="Buscar" onclick="toggleSearch()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </div>
       <div class="icon-btn" title="Carrinho" onclick="toggleCart()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7H6"/></svg>
       </div>
+    </div>
+  </div>
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-box">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar lanche, fritas, bebida..." oninput="filtrarBusca(this.value)" autocomplete="off">
+      <button class="search-close" onclick="toggleSearch()" title="Fechar busca">&times;</button>
     </div>
   </div>
 </header>
@@ -1289,6 +1321,53 @@
       });
     });
   });
+
+  // ---- busca no cardapio ----
+  function normalizarTxt(txt){
+    return (txt || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
+  function toggleSearch(){
+    const ov = document.getElementById('searchOverlay');
+    const input = document.getElementById('searchInput');
+    ov.classList.toggle('on');
+    if(ov.classList.contains('on')){
+      setTimeout(() => input.focus(), 150);
+    } else {
+      input.value = '';
+      filtrarBusca('');
+    }
+  }
+
+  function filtrarBusca(termoRaw){
+    const termo = normalizarTxt((termoRaw || '').trim());
+
+    if(!termo){
+      const tabAtiva = document.querySelector('.cat-tab.active');
+      const cat = tabAtiva ? tabAtiva.dataset.cat : 'todos';
+      cards.forEach(c => {
+        c.style.display = (cat === 'todos' || c.dataset.cat === cat) ? '' : 'none';
+      });
+      document.getElementById('cardapio')?.scrollIntoView({ behavior:'smooth', block:'start' });
+      return;
+    }
+
+    cards.forEach(c => {
+      const titulo = c.querySelector('h4, .list-group-title');
+      const desc = c.querySelector('.item-body p');
+      const linhasDaLista = c.querySelectorAll('.list-row span:first-child');
+
+      let bate = false;
+      if(titulo && normalizarTxt(titulo.textContent).includes(termo)) bate = true;
+      if(!bate && desc && normalizarTxt(desc.textContent).includes(termo)) bate = true;
+      if(!bate){
+        linhasDaLista.forEach(l => { if(normalizarTxt(l.textContent).includes(termo)) bate = true; });
+      }
+      c.style.display = bate ? '' : 'none';
+    });
+
+    document.getElementById('cardapio')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 
   // ---- carrinho real (addItem, changeQty, checkout etc.) vem de js/cart.js ----
 

@@ -75,7 +75,7 @@
     flex-shrink:0;
     overflow:hidden;
   }
-  .brand-mark img{width:100%; height:100%; object-fit:cover;}
+  .brand-mark img{width:100%; height:100%; object-fit:cover; font-size:0; color:transparent;}
   .brand-name{display:flex; flex-direction:column; line-height:1;}
   .brand-name span:first-child{font-family:'Anton'; font-size:19px; letter-spacing:.02em; text-transform:uppercase;}
   .brand-name span:last-child{font-size:11px; color:var(--gold); letter-spacing:.15em; text-transform:uppercase; margin-top:5px; font-weight:600;}
@@ -309,7 +309,7 @@
     isolation:isolate;
     display:flex; align-items:center; justify-content:center;
   }
-  .item-media img{width:100%; height:100%; object-fit:cover; display:block;}
+  .item-media img{width:100%; height:100%; object-fit:cover; display:block; font-size:0; color:transparent;}
   /* Fallback quando a imagem falha ao carregar: some a imagem quebrada e
      mostra um ícone neutro no lugar, sem nunca deixar o texto alt vazar
      por baixo das tags/selos que ficam em position:absolute. */
@@ -360,7 +360,7 @@
     display:flex; align-items:center; justify-content:center;
     font-size:16px;
   }
-  .brand-stamp img{width:100%; height:100%; object-fit:cover; display:block;}
+  .brand-stamp img{width:100%; height:100%; object-fit:cover; display:block; font-size:0; color:transparent;}
   .brand-stamp img.img-broken{display:none;}
 
   /* ---------- COMBO CASAL HIGHLIGHT ---------- */
@@ -460,7 +460,7 @@
     padding:2px;
   }
   .ig-avatar-inner{width:100%; height:100%; border-radius:50%; overflow:hidden; border:2px solid var(--bg-soft); background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:18px;}
-  .ig-avatar-inner img{width:100%; height:100%; object-fit:cover;}
+  .ig-avatar-inner img{width:100%; height:100%; object-fit:cover; font-size:0; color:transparent;}
   .ig-avatar-inner img.img-broken{display:none;}
   .ig-card h5{font-size:14.5px;}
   .ig-card p{font-size:12.5px; color:var(--cream-dim); margin-top:2px;}
@@ -693,7 +693,7 @@
   <div class="header-inner">
     <div class="brand">
       <div class="brand-mark">
-        <img src="assets/logo-touro.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)">
+        <img src="imagens/logo.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)">
       </div>
       <div class="brand-name">
         <span>Moreira's Burguer</span>
@@ -791,7 +791,7 @@
           <span class="item-tag">Mais pedido</span>
           <img src="assets/burguer-classico.jpg" alt="M. Burguer clássico" onerror="handleImgError(this)">
           <span class="media-fallback">🍔</span>
-          <div class="brand-stamp"><img src="assets/logo-touro.jpg" alt="Moreira's Burguer" onerror="handleImgError(this)"></div>
+          <div class="brand-stamp"><img src="imagens/logo.jpg" alt="Moreira's Burguer" onerror="handleImgError(this)"></div>
         </div>
         <div class="item-body">
           <h4>M. Burguer</h4>
@@ -1033,7 +1033,7 @@
       <h3 class="display">Combo Casal<br>Moreira's</h3>
       <p>2 hambúrgueres artesanais à sua escolha, 1 porção de fritas pra dividir (ou não) e 2 refrigerantes gelados.</p>
       <div class="hero-cta" style="margin-top:22px;">
-        <div class="btn btn-primary" onclick="addItem(null,'Combo Casal')">Adicionar combo</div>
+        <div class="btn btn-primary" onclick="openComboCasal()">Escolher lanches</div>
       </div>
     </div>
     <div class="combo-price-box">
@@ -1096,7 +1096,7 @@
       </div>
     </div>
     <div class="ig-card">
-      <div class="ig-avatar"><div class="ig-avatar-inner"><img src="assets/logo-touro.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)"></div></div>
+      <div class="ig-avatar"><div class="ig-avatar-inner"><img src="imagens/logo.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)"></div></div>
       <div>
         <h5>@moreiras.burguer_</h5>
         <p>2.202 seguidores · Criador(a) de conteúdo digital</p>
@@ -1111,7 +1111,7 @@
   <div class="wrap footer-grid">
     <div class="footer-brand">
       <div class="brand-mark" style="width:40px; height:40px;">
-        <img src="assets/logo-touro.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)">
+        <img src="imagens/logo.jpg" alt="Logo Moreira's Burguer" onerror="handleImgError(this)">
       </div>
       <div class="brand-name">
         <span class="display" style="font-size:14px;">Moreira's Burguer</span>
@@ -1219,6 +1219,21 @@
   </div>
 </div>
 
+<!-- COMBO CASAL: escolha dos 2 lanches -->
+<div class="overlay" id="comboOverlay" onclick="if(event.target===this) closeComboCasal()">
+  <div class="sheet" style="max-width:460px;">
+    <div class="sheet-head">
+      <h3>Combo Casal — escolha 2 lanches</h3>
+      <button class="cart-close" onclick="closeComboCasal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px; color:var(--cream-dim); margin-bottom:10px;">
+      Selecione <b id="comboSelCount">0</b>/2 lanches. O combo já inclui 1 porção de fritas e 2 refrigerantes.
+    </p>
+    <div id="comboLanchesBody"></div>
+    <div class="btn btn-primary btn-block" id="comboConfirmBtn" onclick="confirmarComboCasal()">adicionar combo</div>
+  </div>
+</div>
+
 <!-- PIX -->
 <div class="overlay" id="pixOverlay" onclick="if(event.target===this) closePix()">
   <div class="sheet" style="max-width:420px; text-align:center;">
@@ -1276,6 +1291,78 @@
   });
 
   // ---- carrinho real (addItem, changeQty, checkout etc.) vem de js/cart.js ----
+
+  // ---- Combo Casal: escolha de 2 lanches entre todo o cardápio de lanches ----
+  let comboSelecionados = [];
+
+  function openComboCasal(){
+    comboSelecionados = [];
+    const nomes = Object.keys(window.MENU_MOREIRAS).filter(n => {
+      const cat = window.MENU_MOREIRAS[n].cat;
+      return cat === 'classicos' || cat === 'casa';
+    });
+    const body = document.getElementById('comboLanchesBody');
+    body.innerHTML = nomes.map(n => `
+      <label class="opt-row" data-combo-nome="${n}">
+        <input type="checkbox" value="${n}" onchange="toggleComboLanche('${n}', this.checked)">
+        ${n}
+        <span>${fmtBR(window.MENU_MOREIRAS[n].price)}</span>
+      </label>`).join('');
+    atualizarComboUI();
+    document.getElementById('comboOverlay').classList.add('on');
+  }
+
+  function closeComboCasal(){
+    document.getElementById('comboOverlay').classList.remove('on');
+  }
+
+  function toggleComboLanche(nome, marcado){
+    if(marcado){
+      if(comboSelecionados.length >= 2){
+        // ja tem 2 escolhidos, desmarca o checkbox que acabou de tentar marcar
+        const input = document.querySelector(`[data-combo-nome="${nome}"] input`);
+        if(input) input.checked = false;
+        showToast('Você já escolheu 2 lanches');
+        return;
+      }
+      comboSelecionados.push(nome);
+    } else {
+      comboSelecionados = comboSelecionados.filter(n => n !== nome);
+    }
+    atualizarComboUI();
+  }
+
+  function atualizarComboUI(){
+    document.getElementById('comboSelCount').textContent = comboSelecionados.length;
+    // trava os checkboxes que nao estao marcados quando ja tem 2 selecionados
+    document.querySelectorAll('#comboLanchesBody .opt-row').forEach(row => {
+      const nome = row.dataset.comboNome;
+      const input = row.querySelector('input');
+      const jaSelecionado = comboSelecionados.includes(nome);
+      input.disabled = !jaSelecionado && comboSelecionados.length >= 2;
+      row.style.opacity = input.disabled ? '.4' : '1';
+    });
+  }
+
+  function confirmarComboCasal(){
+    if(comboSelecionados.length !== 2){
+      showToast('Escolha exatamente 2 lanches');
+      return;
+    }
+    const [l1, l2] = comboSelecionados;
+    cart.push({
+      name: 'Combo Casal',
+      price: window.MENU_MOREIRAS['Combo Casal'].price,
+      qty: 1,
+      adicionais: '',
+      ponto: '',
+      observacao: l1 + ' + ' + l2
+    });
+    renderCart();
+    document.getElementById('cartBar')?.classList.add('show');
+    showToast('Combo Casal adicionado');
+    closeComboCasal();
+  }
 
   function applyCoupon(){
     showToast('Cupom MOREIRA01 copiado');

@@ -1289,6 +1289,23 @@
     clearTimeout(window.__toastTimer);
     window.__toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
   }
+
+  // ---- sincroniza o preco exibido no card com o que o admin definiu ----
+  // (o carrinho ja usa window.MENU_MOREIRAS[name].price direto; isso aqui
+  // so atualiza o texto "R$ xx,xx" mostrado em cada item-card)
+  function sincronizarPrecosExibidos(){
+    document.querySelectorAll('[onclick^="addItem("]').forEach(btn => {
+      const m = btn.getAttribute('onclick').match(/addItem\(this,\s*'([^']+)'\)/);
+      if(!m) return;
+      const nome = m[1];
+      const item = window.MENU_MOREIRAS && window.MENU_MOREIRAS[nome];
+      if(!item) return;
+      const card = btn.closest('.item-footer');
+      const precoEl = card ? card.querySelector('.item-price') : null;
+      if(precoEl) precoEl.textContent = 'R$ ' + item.price.toFixed(2).replace('.', ',');
+    });
+  }
+  window.addEventListener('disponibilidade:carregada', sincronizarPrecosExibidos);
 </script>
 
 </body>

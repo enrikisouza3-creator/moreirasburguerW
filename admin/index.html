@@ -80,6 +80,28 @@
 
   .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(140%); background:var(--ink); border:1px solid var(--gold); color:var(--cream); padding:12px 20px; border-radius:10px; font-size:13.5px; z-index:200; transition:transform .3s;}
   .toast.show{transform:translateX(-50%) translateY(0);}
+
+  .btn-print{background:var(--gold); color:var(--ink); border:none; padding:10px 14px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
+  .btn-print:hover{filter:brightness(1.05);}
+  .novo-badge-pulse{animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  /* ---- CUPOM DE IMPRESSAO (80mm) ---- */
+  #reciboArea{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #reciboArea, #reciboArea *{visibility:visible;}
+    #reciboArea{
+      display:block; position:fixed; top:0; left:0;
+      width:80mm; padding:2mm 3mm; font-family:'JetBrains Mono', monospace;
+      color:#000; font-size:11.5px; line-height:1.45;
+    }
+    @page{ size:80mm auto; margin:0; }
+  }
+  .recibo-center{text-align:center;}
+  .recibo-linha{border-top:1px dashed #000; margin:6px 0;}
+  .recibo-row{display:flex; justify-content:space-between; gap:8px;}
+  .recibo-title{font-weight:700; font-size:14px; text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -128,7 +150,7 @@
         <button data-status="entregue" onclick="filterPedidos('entregue',this)">Entregue</button>
         <button data-status="cancelado" onclick="filterPedidos('cancelado',this)">Cancelado</button>
       </div>
-      <table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Bairro</th><th>Total</th><th>Pagamento</th><th>Status</th></tr></thead>
+      <table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Bairro</th><th>Total</th><th>Pagamento</th><th>Status</th><th></th></tr></thead>
         <tbody id="pedidosTbody"></tbody>
       </table>
     </div>
@@ -177,12 +199,24 @@
       <option value="entregue">Entregue</option>
       <option value="cancelado">Cancelado</option>
     </select>
-    <button class="btn-small" style="width:100%; margin-top:10px;" onclick="salvarStatus()">Salvar status</button>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button class="btn-print" style="flex:1;" onclick="imprimirPedido()">🖨️ Imprimir cupom</button>
+      <button class="btn-small" style="flex:1;" onclick="salvarStatus()">Salvar status</button>
+    </div>
   </div>
 </div>
 
+<!-- AREA DE IMPRESSAO (so aparece no papel, ver @media print) -->
+<div id="reciboArea"></div>
+
+<!-- alerta sonoro de pedido novo -->
+<audio id="alertaPedidoAudio" preload="auto">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
 <div class="toast" id="toast"><span id="toastMsg"></span></div>
 
+<script src="../js/data.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════════
    CONFIG -- mesmo padrao do resto do projeto: chaves aqui,
@@ -255,6 +289,31 @@ function showPage(page, btn){
 
 function initApp(){
   loadDashboard();
+  if(!window.__pollingPedidos){
+    window.__pollingPedidos = setInterval(loadDashboard, 20000); // verifica pedido novo a cada 20s
+  }
+}
+
+/* ---- deteccao de pedido novo + alerta sonoro ---- */
+let idsPedidosConhecidos = null;
+
+function verificarPedidosNovos(pedidos){
+  const idsAtuais = new Set(pedidos.map(p=>p.id));
+  if(idsPedidosConhecidos === null){
+    idsPedidosConhecidos = idsAtuais; // primeira carga: so guarda, nao alerta
+    return;
+  }
+  const temNovo = pedidos.some(p => p.status==='novo' && !idsPedidosConhecidos.has(p.id));
+  if(temNovo){
+    tocarAlertaPedido();
+    showToast('Novo pedido recebido!');
+  }
+  idsPedidosConhecidos = idsAtuais;
+}
+
+function tocarAlertaPedido(){
+  const audio = document.getElementById('alertaPedidoAudio');
+  if(audio){ audio.currentTime = 0; audio.play().catch(()=>{}); }
 }
 
 /* ---- dashboard ---- */
@@ -273,9 +332,11 @@ async function loadDashboard(){
   const tbody = document.querySelector('#dashTable tbody');
   tbody.innerHTML = pedidos.slice(0,8).map(p => `
     <tr class="pedido-row" onclick="openDetalhe('${p.id}')">
-      <td>${p.cliente_nome}</td><td>${p.bairro||'-'}</td><td>${fmtBR(p.total)}</td>
+      <td>${esc(p.cliente_nome)}</td><td>${esc(p.bairro||'-')}</td><td>${fmtBR(p.total)}</td>
       <td><span class="badge ${p.status}">${STATUS_LABEL[p.status]||p.status}</span></td>
     </tr>`).join('') || '<tr><td colspan="4">Nenhum pedido ainda.</td></tr>';
+
+  verificarPedidosNovos(pedidos);
 }
 
 /* ---- pedidos ---- */
@@ -298,20 +359,26 @@ function renderPedidos(){
   const lista = filtroStatusAtual==='todos' ? PEDIDOS_CACHE : PEDIDOS_CACHE.filter(p=>p.status===filtroStatusAtual);
   const tbody = document.getElementById('pedidosTbody');
   tbody.innerHTML = lista.map(p => `
-    <tr class="pedido-row" onclick="openDetalhe('${p.id}')">
-      <td>${p.cliente_nome}</td><td>${p.cliente_tel}</td><td>${p.bairro||'-'}</td>
-      <td>${fmtBR(p.total)}</td><td>${p.forma_pagamento||'-'}</td>
-      <td><span class="badge ${p.status}">${STATUS_LABEL[p.status]||p.status}</span></td>
-    </tr>`).join('') || '<tr><td colspan="6">Nenhum pedido nessa categoria.</td></tr>';
+    <tr class="pedido-row">
+      <td onclick="openDetalhe('${p.id}')">${esc(p.cliente_nome)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.cliente_tel)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.bairro||'-')}</td>
+      <td onclick="openDetalhe('${p.id}')">${fmtBR(p.total)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.forma_pagamento||'-')}</td>
+      <td onclick="openDetalhe('${p.id}')"><span class="badge ${p.status} ${p.status==='novo'?'novo-badge-pulse':''}">${STATUS_LABEL[p.status]||p.status}</span></td>
+      <td><button class="btn-print" onclick="event.stopPropagation(); imprimirPedidoRapido('${p.id}')" title="Imprimir cupom">🖨️</button></td>
+    </tr>`).join('') || '<tr><td colspan="7">Nenhum pedido nessa categoria.</td></tr>';
 }
 
 let pedidoAberto = null;
+let itensAberto = [];
 
 async function openDetalhe(id){
   const pedido = PEDIDOS_CACHE.find(p=>p.id===id);
   if(!pedido) return;
   pedidoAberto = pedido;
   const itens = await supa(`itens_pedido?pedido_id=eq.${id}&select=*`);
+  itensAberto = itens;
   document.getElementById('detalheBody').innerHTML = `
     <div class="row"><span>Cliente</span><b>${pedido.cliente_nome}</b></div>
     <div class="row"><span>WhatsApp</span><b>${pedido.cliente_tel}</b></div>
@@ -329,7 +396,57 @@ async function openDetalhe(id){
   document.getElementById('detalheOverlay').classList.add('on');
 }
 
-function closeDetalhe(){ document.getElementById('detalheOverlay').classList.remove('on'); pedidoAberto=null; }
+function closeDetalhe(){ document.getElementById('detalheOverlay').classList.remove('on'); pedidoAberto=null; itensAberto=[]; }
+
+/* escapa texto antes de jogar no innerHTML -- nome, endereco, etc vem do cliente */
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function montarReciboHTML(pedido, itens){
+  const dataHora = pedido.criado_em ? new Date(pedido.criado_em).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+  return `
+    <div class="recibo-center recibo-title">Moreira's Burguer</div>
+    <div class="recibo-center">Pedido #${esc(String(pedido.id).slice(0,8))}</div>
+    <div class="recibo-center">${esc(dataHora)}</div>
+    <div class="recibo-linha"></div>
+    <div><b>Cliente:</b> ${esc(pedido.cliente_nome)}</div>
+    <div><b>WhatsApp:</b> ${esc(pedido.cliente_tel)}</div>
+    <div><b>Bairro:</b> ${esc(pedido.bairro || '-')}</div>
+    <div><b>Endereco:</b> ${esc(pedido.endereco || '-')}</div>
+    ${pedido.referencia ? `<div><b>Ref:</b> ${esc(pedido.referencia)}</div>` : ''}
+    <div class="recibo-linha"></div>
+    ${itens.map(i => `
+      <div class="recibo-row"><span>${esc(i.quantidade)}x ${esc(i.item)}</span><span>${fmtBR(i.subtotal)}</span></div>
+      ${i.adicionais ? `<div style="padding-left:8px; font-size:10.5px;">+ ${esc(i.adicionais)}</div>` : ''}
+      ${i.observacao ? `<div style="padding-left:8px; font-size:10.5px;">obs: ${esc(i.observacao)}</div>` : ''}
+    `).join('')}
+    <div class="recibo-linha"></div>
+    <div class="recibo-row"><span>Subtotal</span><span>${fmtBR(pedido.subtotal)}</span></div>
+    <div class="recibo-row"><span>Desconto</span><span>-${fmtBR(pedido.desconto)}</span></div>
+    <div class="recibo-row"><span>Entrega</span><span>${fmtBR(pedido.taxa_entrega)}</span></div>
+    <div class="recibo-linha"></div>
+    <div class="recibo-row recibo-title"><span>TOTAL</span><span>${fmtBR(pedido.total)}</span></div>
+    <div class="recibo-center" style="margin-top:4px;">Pagamento: ${esc(pedido.forma_pagamento || '-')}</div>
+    <div class="recibo-linha"></div>
+    <div class="recibo-center" style="font-size:10px;">Obrigado pela preferencia!</div>
+  `;
+}
+
+function imprimirPedido(){
+  if(!pedidoAberto) return;
+  document.getElementById('reciboArea').innerHTML = montarReciboHTML(pedidoAberto, itensAberto);
+  window.print();
+}
+
+/* impressao rapida direto da tabela, sem abrir o modal */
+async function imprimirPedidoRapido(id){
+  const pedido = PEDIDOS_CACHE.find(p=>p.id===id);
+  if(!pedido) return;
+  const itens = await supa(`itens_pedido?pedido_id=eq.${id}&select=*`);
+  document.getElementById('reciboArea').innerHTML = montarReciboHTML(pedido, itens);
+  window.print();
+}
 
 async function salvarStatus(){
   if(!pedidoAberto) return;
@@ -382,19 +499,41 @@ async function adicionarBairro(){
   loadBairros();
 }
 
-/* ---- cardapio (disponibilidade) ---- */
+/* ---- cardapio (disponibilidade + preco) ---- */
 async function loadCardapio(){
   const disponibilidade = await supa('cardapio_disponibilidade?select=*');
-  const map = {};
-  disponibilidade.forEach(d => { map[d.item] = d.disponivel; });
+  const mapDisp = {};
+  const mapPreco = {};
+  disponibilidade.forEach(d => { mapDisp[d.item] = d.disponivel; mapPreco[d.item] = d.preco; });
   const nomes = Object.keys(window.MENU_MOREIRAS || {}).length ? Object.keys(window.MENU_MOREIRAS) :
     ["M. Burguer","M. Chef","M. Egg","M. Salada","Cupim Cremoso","Cupim no Ponto","M. Bacon","M. Melt","M. Veggie","Fritas 150g","Dobro de Fritas","Refrigerante Lata","Suco Natural","Combo Casal"];
 
   document.getElementById('cardapioList').innerHTML = nomes.map(nome => {
-    const disponivel = map[nome] !== false;
-    return `<div class="item-row"><span style="flex:1;">${nome}</span>
-      <button class="toggle ${disponivel?'on':''}" onclick="toggleDisponibilidade('${nome.replace(/'/g,"\\'")}',${!disponivel})"></button></div>`;
+    const disponivel = mapDisp[nome] !== false;
+    const precoAtual = (mapPreco[nome] !== undefined && mapPreco[nome] !== null)
+      ? Number(mapPreco[nome])
+      : (window.MENU_MOREIRAS?.[nome]?.price ?? 0);
+    const nomeEsc = esc(nome).replace(/'/g,"\\'");
+    return `<div class="item-row">
+      <span style="flex:1;">${esc(nome)}</span>
+      <span class="mono" style="font-size:12px; color:var(--cream-dim);">R$</span>
+      <input type="number" step="0.01" value="${precoAtual.toFixed(2)}"
+        onchange="atualizarPrecoItem('${nomeEsc}', this.value)" style="width:80px;">
+      <button class="toggle ${disponivel?'on':''}" onclick="toggleDisponibilidade('${nomeEsc}',${!disponivel})"></button>
+    </div>`;
   }).join('');
+}
+
+async function atualizarPrecoItem(item, novoValor){
+  const preco = Number(novoValor);
+  if(isNaN(preco) || preco < 0){ showToast('Preco invalido'); loadCardapio(); return; }
+  const existentes = await supa(`cardapio_disponibilidade?item=eq.${encodeURIComponent(item)}&select=id`);
+  if(existentes.length){
+    await supa(`cardapio_disponibilidade?id=eq.${existentes[0].id}`, { method:'PATCH', prefer:'return=minimal', body: JSON.stringify({ preco, atualizado_em:new Date().toISOString() }) });
+  } else {
+    await supa('cardapio_disponibilidade', { method:'POST', prefer:'return=minimal', body: JSON.stringify({ item, disponivel:true, preco }) });
+  }
+  showToast('Preco atualizado');
 }
 
 async function toggleDisponibilidade(item, disponivel){

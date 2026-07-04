@@ -41,6 +41,7 @@ create table if not exists cardapio_disponibilidade (
   id          uuid primary key default gen_random_uuid(),
   item        text not null unique,
   disponivel  boolean not null default true,
+  preco       numeric(10,2),  -- se preenchido, sobrescreve o preco fixo do js/data.js
   atualizado_em timestamptz default now()
 );
 
@@ -113,3 +114,6 @@ on conflict (bairro) do nothing;
 insert into cupons (codigo, tipo, valor, ativo) values
   ('MOREIRA01', 'percentual', 20, true)
 on conflict (codigo) do nothing;
+
+-- ---- MIGRACAO (rode isso se a tabela cardapio_disponibilidade ja existir) ----
+alter table cardapio_disponibilidade add column if not exists preco numeric(10,2);

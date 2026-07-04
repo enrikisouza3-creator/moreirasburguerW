@@ -222,7 +222,8 @@
    CONFIG -- mesmo padrao do resto do projeto: chaves aqui,
    trocar pelos valores reais do Supabase do Moreira's.
    ══════════════════════════════════════════════════════════ */
-const SUPA_URL  = 'https://pgeqwitgpakgnkyqarts.supabase.co';
+// SUPA_URL ja vem declarado em ../js/data.js (mesmo escopo global);
+// nao redeclarar aqui com const, senao da SyntaxError e quebra o script todo.
 const SUPA_KEY  = 'sb_publishable_VL8sKeovsq4zX59bx_wJIw_ZMX5htNk';
 const ADMIN_PWD = 'Moreira2026';
 
